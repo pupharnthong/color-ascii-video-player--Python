@@ -4,11 +4,8 @@ import numpy as np
 import time
 import os
 import sys
-import subprocess
-import tempfile
-import pygame
 
-video_path = r"C:\Users\pupha\Downloads\heart_download.mp4"
+video_path = "path/to/your/video.mp4"
 
 ASCII_CHARS = ":.=+-_ #*!"
 N_CHARS = len(ASCII_CHARS)
@@ -39,38 +36,6 @@ def init_colors():
     return True
 
 
-def extract_audio(video_path):
-    """Extract audio to a temp wav via ffmpeg. Returns path or None if unavailable."""
-    tmp_wav = os.path.join(tempfile.gettempdir(), "ascii_player_audio.mp4")
-    try:
-        result = subprocess.run(
-            [
-                "ffmpeg", "-y", "-i", video_path,
-                "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
-                tmp_wav,
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if result.returncode != 0 or not os.path.exists(tmp_wav):
-            return None
-        return tmp_wav
-    except FileNotFoundError:
-        return None  # ffmpeg not installed / not on PATH
-
-
-def start_audio(wav_path):
-    """Load and play audio via pygame.mixer. Returns True if playback started."""
-    try:
-        
-        pygame.mixer.init()
-        pygame.mixer.music.load(wav_path)
-        pygame.mixer.music.play()
-        return pygame, True
-    except Exception:
-        return None, False
-
-
 def main(stdscr):
     curses.curs_set(0)
     stdscr.nodelay(True)
@@ -87,13 +52,6 @@ def main(stdscr):
     video_fps = cap.get(cv2.CAP_PROP_FPS)
     frame_interval = (1.0 / video_fps) if video_fps > 0 else (1.0 / 30)
 
-    # --- Try to set up audio and sync to it ---
-    pygame_mod = None
-    audio_ok = False
-    wav_path = extract_audio(video_path)
-    if wav_path:
-        pygame_mod, audio_ok = start_audio(wav_path)
-
     start_time = time.perf_counter()
     frame_index = 0
 
@@ -107,7 +65,7 @@ def main(stdscr):
         target_height = max(1, height - 1)
 
         resized = cv2.resize(frame, (target_width, target_height),
-                              interpolation=cv2.INTER_AREA)
+                             interpolation=cv2.INTER_AREA)
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
         ascii_frame = CHAR_LUT[gray]
 
@@ -154,22 +112,16 @@ def main(stdscr):
             break
 
         frame_index += 1
-        target_time = frame_index * frame_interval  # this frame's ideal timestamp
+        target_time = frame_index * frame_interval
 
-        # --- Sync source of truth: audio clock if available, else wall clock ---
-        if audio_ok:
-            elapsed = pygame_mod.mixer.music.get_pos() / 1000.0  # ms -> s
-            if elapsed < 0:
-                # get_pos() returns -1 if playback hasn't started/has stopped
-                elapsed = time.perf_counter() - start_time
-        else:
-            elapsed = time.perf_counter() - start_time
+        # Sync using wall clock
+        elapsed = time.perf_counter() - start_time
 
         drift = target_time - elapsed
         if drift > 0:
             time.sleep(drift)
         elif drift < -frame_interval:
-            # We're behind by more than a frame: drop frames to catch back up.
+            # Drop frames if rendering falls behind schedule
             frames_behind = int(-drift / frame_interval)
             for _ in range(frames_behind):
                 ret2 = cap.grab()
@@ -178,8 +130,6 @@ def main(stdscr):
                 frame_index += 1
 
     cap.release()
-    if audio_ok:
-        pygame_mod.mixer.music.stop()
 
 
 curses.wrapper(main)
