@@ -11,9 +11,7 @@
 ##  Features
 
 *  **256-Color Support**: Quantizes RGB video colors to ANSI 256-color terminal space.
-*  **Audio Synchronization**: Automatically extracts video audio via FFmpeg and syncs frames using Pygame clock logic.
 *  **Dynamic Frame Dropping**: Automatically drops frames if rendering falls behind to maintain real-time audio sync.
-*  **Auto-Resizing**: Dynamically scales video resolution to fit your current terminal window dimensions.
 
 ---
 
