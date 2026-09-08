@@ -39,7 +39,7 @@ sudo apt update && sudo apt install ffmpeg
 ```
 ## Install required Python packages
 ```Bash
-pip install opencv-python numpy pygame
+pip install opencv-python numpy
 ```
 ```Bash
 pip install windows-curses
@@ -47,7 +47,7 @@ pip install windows-curses
 
 ## Usage
 #Configure Video Path
-video_path = "path/to/your/video.mp4"
+>video_path = "path/to/your/video.mp4"
 
 #Run the Player
 ```Bash
